@@ -70,48 +70,10 @@ def login():
             flash('Tên đăng nhập hoặc mật khẩu không đúng.', 'danger')
     return render_template('index.html')
 
-@app.route('/register', methods=['GET', 'POST'])
-def register():
-    """Xử lý đăng ký người dùng mới."""
-    if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
-        confirm_password = request.form['confirm_password']
-
-        if not username or not password or not confirm_password:
-            flash('Vui lòng điền đầy đủ tất cả các trường.', 'danger')
-            return render_template('register.html', username=username)
-
-        if password != confirm_password:
-            flash('Mật khẩu xác nhận không khớp.', 'danger')
-            return render_template('register.html', username=username)
-
-        conn = get_db_connection()
-        # Kiểm tra xem tên người dùng đã tồn tại chưa
-        existing_user = conn.execute('SELECT * FROM users WHERE username = ?', (username,)).fetchone()
-        if existing_user:
-            conn.close()
-            flash('Tên người dùng đã tồn tại. Vui lòng chọn tên khác.', 'danger')
-            return render_template('register.html', username=username)
-
-        password_hash = generate_password_hash(password)
-        try:
-            # Người dùng đầu tiên đăng ký sẽ là admin
-            cursor = conn.cursor()
-            cursor.execute("SELECT COUNT(*) FROM users")
-            user_count = cursor.fetchone()[0]
-            is_admin = True if user_count == 0 else False # Người dùng đầu tiên là admin
-            
-            cursor.execute('INSERT INTO users (username, password, is_admin) VALUES (?, ?, ?)',
-                           (username, password_hash, is_admin))
-            conn.commit()
-            flash('Đăng ký thành công! Bạn có thể đăng nhập ngay bây giờ.', 'success')
-            return redirect(url_for('login'))
-        except sqlite3.IntegrityError:
-            flash('Lỗi đăng ký. Vui lòng thử lại.', 'danger')
-        finally:
-            conn.close()
-    return render_template('register.html')
+# Xóa bỏ route đăng ký công khai
+# @app.route('/register', methods=['GET', 'POST'])
+# def register():
+#     ... (đoạn mã này đã bị xóa)
 
 @app.route('/dashboard')
 def dashboard():
@@ -135,6 +97,41 @@ def logout():
     session.pop('is_admin', None)
     flash('Bạn đã đăng xuất.', 'info')
     return redirect(url_for('login'))
+
+@app.route('/add_user', methods=['POST'])
+def add_user():
+    """Thêm người dùng mới (chỉ dành cho admin)."""
+    if 'user_id' not in session or not session.get('is_admin'):
+        flash('Bạn không có quyền thực hiện hành động này.', 'danger')
+        return redirect(url_for('dashboard'))
+
+    username = request.form['username']
+    password = request.form['password']
+    is_admin_new_user = request.form.get('is_admin_new_user') == 'on' # Checkbox value
+
+    if not username or not password:
+        flash('Vui lòng điền đầy đủ tên đăng nhập và mật khẩu.', 'danger')
+        return redirect(url_for('dashboard'))
+
+    conn = get_db_connection()
+    existing_user = conn.execute('SELECT * FROM users WHERE username = ?', (username,)).fetchone()
+    if existing_user:
+        conn.close()
+        flash('Tên đăng nhập đã tồn tại. Vui lòng chọn tên khác.', 'danger')
+        return redirect(url_for('dashboard'))
+
+    password_hash = generate_password_hash(password)
+    try:
+        conn.execute('INSERT INTO users (username, password, is_admin) VALUES (?, ?, ?)',
+                       (username, password_hash, is_admin_new_user))
+        conn.commit()
+        flash(f'Người dùng "{username}" đã được thêm thành công!', 'success')
+    except Exception as e:
+        flash(f'Lỗi khi thêm người dùng: {e}', 'danger')
+    finally:
+        conn.close()
+    return redirect(url_for('dashboard'))
+
 
 @app.route('/delete_user/<int:user_id>', methods=['POST'])
 def delete_user(user_id):

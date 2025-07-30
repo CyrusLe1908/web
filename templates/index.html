@@ -7,50 +7,9 @@
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/static/css/login.css">
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-image: url(/static/images/lspd.jpg); /* Sử dụng hình ảnh nền */
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-        }
-        .flash-message {
-            padding: 1rem;
-            margin-bottom: 1rem;
-            border-radius: 0.5rem;
-            font-weight: 600;
-            text-align: center;
-        }
-        .flash-success {
-            background-color: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-        .flash-danger {
-            background-color: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-        .flash-warning {
-            background-color: #fff3cd;
-            color: #856404;
-            border: 1px solid #ffeeba;
-        }
-        .flash-info {
-            background-color: #d1ecf1;
-            color: #0c5460;
-            border: 1px solid #bee5eb;
-        }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
 </head>
-<body class="bg-gray-900 text-white">
+<body class="bg-gray-900 text-white login-background">
     <div class="bg-gray-800 bg-opacity-90 p-8 rounded-xl shadow-2xl w-full max-w-md mx-4 sm:mx-auto">
         <div class="flex flex-col items-center mb-6">
             <img src="https://placehold.co/80x80/FFD700/000000?text=LOGO" alt="Logo Cục Cảnh sát" class="mb-4 rounded-full">
@@ -70,7 +29,7 @@
             {% endif %}
         {% endwith %}
 
-        <form action="/templates/index.html" method="POST" class="space-y-5">
+        <form action="{{ url_for('login') }}" method="POST" class="space-y-5">
             <div>
                 <label for="username" class="block text-gray-400 text-sm font-medium mb-2">TÊN ĐĂNG NHẬP</label>
                 <input type="text" id="username" name="username" placeholder="Nhập tên đăng nhập" required
@@ -81,9 +40,7 @@
                 <input type="password" id="password" name="password" placeholder="Nhập mật khẩu" required
                        class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-yellow-500 text-white placeholder-gray-400">
             </div>
-            <div class="flex justify-end text-sm">
-                <a href="/templates/register.html" class="text-yellow-400 hover:text-yellow-300">Chưa có tài khoản? Đăng ký</a>
-            </div>
+            <!-- Đã xóa liên kết "Chưa có tài khoản? Đăng ký" -->
             <button type="submit"
                     class="w-full bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold py-3 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 shadow-lg">
                 ĐĂNG NHẬP
@@ -97,7 +54,7 @@
     </div>
 
     <!-- Liên kết đến các tệp JavaScript -->
-    <script src="/static/js/loading.js"></script>
-    <script src="/static/js/notification.js"></script>
+    <script src="{{ url_for('static', filename='js/loading.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/notification.js') }}"></script>
 </body>
 </html>
