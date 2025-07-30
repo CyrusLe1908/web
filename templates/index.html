@@ -19,7 +19,7 @@
         </div>
 
         <!-- Flash Messages -->
-        {% with messages = get_flashed_messages(with_categories=true) %}
+        <!--{% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 <div class="mb-4">
                     {% for category, message in messages %}
@@ -27,7 +27,7 @@
                     {% endfor %}
                 </div>
             {% endif %}
-        {% endwith %}
+        {% endwith %}-->
 
         <form action="{{ url_for('login') }}" method="POST" class="space-y-5">
             <div>
@@ -48,7 +48,7 @@
         </form>
 
         <p class="text-center text-gray-500 text-xs mt-6">
-            © 2025 Designed and developed by <a href="#" class="text-yellow-400 hover:underline">@yourname</a>
+            © 2025 Designed and developed by <a href="#" class="text-yellow-400 hover:underline">@cyrusle</a>
             <br>version 1.1
         </p>
     </div>
