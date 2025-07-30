@@ -1,140 +1,103 @@
 <!DOCTYPE html>
 <html lang="vi">
-
 <head>
-    <meta charset="UTF-8" name="csrf-token" content="iDqNlFFyPFrXXv1XkK08fh3wb1F5yf2IDpdkKLBz">
-    <link rel="icon" type="image/x-icon" href="https://lssdhrtime.up.railway.app/assets/images/Logo_LSCSD.png">
-    <title>Đăng nhập</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-
-    <link rel="stylesheet" href="https://lssdhrtime.up.railway.app/assets/bootstrap-5.3.7-dist/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://lssdhrtime.up.railway.app/assets/fontawesome-6.5.0/css/all.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
-    <link href="https://fonts.googleapis.com/css?family=Archivo+Black&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.7/css/bootstrap.min.css"
-        integrity="sha512-fw7f+TcMjTb7bpbLJZlP8g2Y4XcCyFZW8uy8HsRZsH/SwbMw0plKHFHr99DN3l04VsYNwvzicUX/6qurvIxbxw=="
-        crossorigin="anonymous" referrerpolicy="no-referrer" />
-    <link rel="stylesheet" href="https://lssdhrtime.up.railway.app/assets/css/login.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đăng nhập - Cục Cảnh sát</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/login.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-image: url(/static/images/lspd.jpg); /* Sử dụng hình ảnh nền */
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+        .flash-message {
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            text-align: center;
+        }
+        .flash-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .flash-danger {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .flash-warning {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+        }
+        .flash-info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+    </style>
 </head>
-
-<body>
-
-    <div id="loadingOverlay" class="loader-overlay" style="display: none;">
-        <div class="lssd-loader-content">
-            <div class="lssd-badge">
-                <div class="star"></div>
-                <div class="text">LSPD</div>
-            </div>
-            <div class="loading-text">Đang tải Los Santos Police Department...</div>
-            <div class="loader-clock">
-                <span class="hour"></span>
-                <span class="min"></span>
-                <span class="circel"></span>
-            </div>
+<body class="bg-gray-900 text-white">
+    <div class="bg-gray-800 bg-opacity-90 p-8 rounded-xl shadow-2xl w-full max-w-md mx-4 sm:mx-auto">
+        <div class="flex flex-col items-center mb-6">
+            <img src="https://placehold.co/80x80/FFD700/000000?text=LOGO" alt="Logo Cục Cảnh sát" class="mb-4 rounded-full">
+            <h1 class="text-3xl font-bold text-yellow-400 mb-2">CỤC CẢNH SÁT</h1>
+            <p class="text-gray-300 text-sm">LOS SANTOS POLICE DEPARTMENT</p>
+            <p class="text-gray-400 text-xs">GTA5 RLIFE</p>
         </div>
-    </div>
 
-    <div class="container group-login">
-        <div class="login-box">
-            <div class="logo-login-page">
-                <img src="https://lssdhrtime.up.railway.app/assets/images/LSSD_HRM.logo2.png" alt="Logo">
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="mb-4">
+                    {% for category, message in messages %}
+                        <div class="flash-message flash-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <form action="/templates/index.html" method="POST" class="space-y-5">
+            <div>
+                <label for="username" class="block text-gray-400 text-sm font-medium mb-2">TÊN ĐĂNG NHẬP</label>
+                <input type="text" id="username" name="username" placeholder="Nhập tên đăng nhập" required
+                       class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-yellow-500 text-white placeholder-gray-400">
             </div>
-            <h2>CỤC CẢNH SÁT<br><span>LOS SANTOS POLICE DEPARTMENT</span><br>GTA5 RLIFE</h2>
+            <div>
+                <label for="password" class="block text-gray-400 text-sm font-medium mb-2">MẬT KHẨU</label>
+                <input type="password" id="password" name="password" placeholder="Nhập mật khẩu" required
+                       class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-yellow-500 text-white placeholder-gray-400">
+            </div>
+            <div class="flex justify-end text-sm">
+                <a href="/templates/register.html" class="text-yellow-400 hover:text-yellow-300">Chưa có tài khoản? Đăng ký</a>
+            </div>
+            <button type="submit"
+                    class="w-full bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold py-3 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 shadow-lg">
+                ĐĂNG NHẬP
+            </button>
+        </form>
 
-            <form id="loginForm" class="form-login">
-                <input type="hidden" name="_token" value="iDqNlFFyPFrXXv1XkK08fh3wb1F5yf2IDpdkKLBz" autocomplete="off">
-                <div class="form__group field">
-                    <input type="text" class="form__field input-login" placeholder="TÊN ĐĂNG NHẬP" name="username"
-                        id="username" required />
-                    <label for="username" class="form__label">TÊN ĐĂNG NHẬP</label>
-                </div>
-
-                <div class="form__group field" style="margin-top: 20px; position: relative;">
-                    <input type="password" class="form__field input-login" placeholder="MẬT KHẨU" name="password"
-                        id="password" required />
-                    <label for="password" class="form__label">MẬT KHẨU</label>
-                    <i class="fa-regular fa-eye toggle-password" id="togglePassword"></i>
-                </div>
-
-                <div class="account-option">
-                    <span>
-                        <a href="/register" class="note-account-link">Chưa có tài khoản? Đăng ký</a>
-                    </span>
-                </div>
-                <button type="submit" class="btn-login">ĐĂNG NHẬP</button>
-            </form>
-            <p class="footer-login-page">© 2025 Designed and developed by <a style="color: white;"
-                    href="https://github.com/CyrusLe1908" target="_blank">@cyrusle</a></p>
-            <p class="version-login-page">version 0.1</p>
-        </div>
+        <p class="text-center text-gray-500 text-xs mt-6">
+            © 2025 Designed and developed by <a href="#" class="text-yellow-400 hover:underline">@yourname</a>
+            <br>version 1.1
+        </p>
     </div>
 
-    <div class="notifications">
-        <span id="session-success" data-message=""></span>
-        <span id="session-warning" data-message=""></span>
-        <span id="session-info" data-message=""></span>
-        <span id="session-error" data-message=""></span>
-    </div>
-
-    <script src="https://lssdhrtime.up.railway.app/assets/js/loading.js"></script>
-    <script src="https://lssdhrtime.up.railway.app/assets/js/notification.js"></script>
-    <script src="https://lssdhrtime.up.railway.app/assets/bootstrap-5.3.7-dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const togglePassword = document.getElementById('togglePassword');
-            const passwordField = document.getElementById('password');
-
-            togglePassword.addEventListener('click', function () {
-                const type = passwordField.getAttribute('type') === 'password' ? 'text' : 'password';
-                passwordField.setAttribute('type', type);
-                this.classList.toggle('fa-eye');
-                this.classList.toggle('fa-eye-slash');
-            });
-
-            document.getElementById('loginForm').addEventListener('submit', async function (e) {
-                e.preventDefault();
-                showLoading();
-
-                const username = document.getElementById('username').value;
-                const password = document.getElementById('password').value;
-                const btn = document.querySelector('.btn-login');
-
-                btn.disabled = true;
-                btn.textContent = 'Đang đăng nhập...';
-
-                try {
-                    const response = await fetch('/login', { // Điểm cuối này sẽ được xử lý bởi backend Python của bạn
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                        },
-                        body: JSON.stringify({ username, password })
-                    });
-
-                    const data = await response.json();
-
-                    if (response.ok) {
-                        toastr.success(data.message || 'Đăng nhập thành công!');
-                        // Chuyển hướng đến bảng điều khiển hoặc trang chủ sau khi đăng nhập thành công
-                        window.location.href = '/dashboard'; 
-                    } else {
-                        toastr.error(data.message || 'Đăng nhập thất bại. Sai tên đăng nhập hoặc mật khẩu.');
-                    }
-                } catch (error) {
-                    console.error('Lỗi trong quá trình đăng nhập:', error);
-                    toastr.error('Có lỗi xảy ra khi đăng nhập. Vui lòng thử lại sau.');
-                } finally {
-                    hideLoading();
-                    btn.disabled = false;
-                    btn.textContent = 'ĐĂNG NHẬP';
-                }
-            });
-        });
-    </script>
+    <!-- Liên kết đến các tệp JavaScript -->
+    <script src="/static/js/loading.js"></script>
+    <script src="/static/js/notification.js"></script>
 </body>
-
 </html>

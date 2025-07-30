@@ -1,167 +1,199 @@
-import os
-from flask import Flask, render_template, request, redirect, url_for, session, jsonify
-from flask_sqlalchemy import SQLAlchemy
+# app.py
+import sqlite3
+from flask import Flask, render_template, request, redirect, url_for, session, flash
 from werkzeug.security import generate_password_hash, check_password_hash
-from dotenv import load_dotenv
-
-# Tải các biến môi trường từ tệp .env (cho SECRET_KEY)
-load_dotenv()
+import os
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'a_very_secret_key_that_should_be_random_and_long') # Thay đổi cái này trong môi trường sản xuất
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db' # Tệp cơ sở dữ liệu SQLite
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-db = SQLAlchemy(app)
+app.secret_key = 'your_secret_key_here' # Thay thế bằng một khóa bí mật mạnh hơn trong môi trường sản phẩm
 
-# Mô hình người dùng
-class User(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(80), unique=True, nullable=False)
-    password_hash = db.Column(db.String(120), nullable=False)
-    is_admin = db.Column(db.Boolean, default=False) # Thêm cờ admin
+# Đường dẫn đến cơ sở dữ liệu SQLite
+DATABASE = 'database.db'
 
-    def __repr__(self):
-        return f'<User {self.username}>'
+def get_db_connection():
+    """Tạo kết nối đến cơ sở dữ liệu."""
+    conn = sqlite3.connect(DATABASE)
+    conn.row_factory = sqlite3.Row # Cho phép truy cập các cột bằng tên
+    return conn
 
-    def set_password(self, password):
-        self.password_hash = generate_password_hash(password)
+def init_db():
+    """Khởi tạo cơ sở dữ liệu và tạo bảng người dùng."""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT UNIQUE NOT NULL,
+                password TEXT NOT NULL,
+                is_admin BOOLEAN NOT NULL DEFAULT 0
+            )
+        ''')
+        # Kiểm tra nếu chưa có người dùng nào, tạo người dùng admin đầu tiên
+        cursor.execute("SELECT COUNT(*) FROM users")
+        if cursor.fetchone()[0] == 0:
+            admin_username = "admin"
+            admin_password_hash = generate_password_hash("adminpass") # Mật khẩu mặc định cho admin đầu tiên
+            cursor.execute("INSERT INTO users (username, password, is_admin) VALUES (?, ?, ?)",
+                           (admin_username, admin_password_hash, True))
+            conn.commit()
+            print(f"Người dùng quản trị '{admin_username}' đã được tạo với mật khẩu 'adminpass'.")
+        conn.commit()
 
-    def check_password(self, password):
-        return check_password_hash(self.password_hash, password)
-
-# Tạo bảng cơ sở dữ liệu
+# Khởi tạo cơ sở dữ liệu khi ứng dụng bắt đầu
 with app.app_context():
-    db.create_all()
-    # Tùy chọn: Tạo người dùng admin nếu không có cho thiết lập ban đầu
-    if not User.query.filter_by(username='admin').first():
-        admin_user = User(username='admin', is_admin=True)
-        admin_user.set_password('adminpassword') # THAY ĐỔI MẬT KHẨU NÀY NGAY LẬP TỨC!
-        db.session.add(admin_user)
-        db.session.commit()
-        print("Người dùng admin 'admin' đã được tạo với mật khẩu 'adminpassword'")
-
-# Các tuyến đường
+    init_db()
 
 @app.route('/')
-def login_page():
-    return render_template('index.html') # Trang đăng nhập của bạn
+def index():
+    """Chuyển hướng đến trang đăng nhập."""
+    if 'user_id' in session:
+        return redirect(url_for('dashboard'))
+    return redirect(url_for('login'))
 
-@app.route('/register')
-def register_page():
-    return render_template('register.html') # Trang đăng ký của bạn
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    """Xử lý đăng nhập người dùng."""
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        conn = get_db_connection()
+        user = conn.execute('SELECT * FROM users WHERE username = ?', (username,)).fetchone()
+        conn.close()
+
+        if user and check_password_hash(user['password'], password):
+            session['user_id'] = user['id']
+            session['username'] = user['username']
+            session['is_admin'] = bool(user['is_admin'])
+            flash('Đăng nhập thành công!', 'success')
+            return redirect(url_for('dashboard'))
+        else:
+            flash('Tên đăng nhập hoặc mật khẩu không đúng.', 'danger')
+    return render_template('index.html')
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    """Xử lý đăng ký người dùng mới."""
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        confirm_password = request.form['confirm_password']
+
+        if not username or not password or not confirm_password:
+            flash('Vui lòng điền đầy đủ tất cả các trường.', 'danger')
+            return render_template('register.html', username=username)
+
+        if password != confirm_password:
+            flash('Mật khẩu xác nhận không khớp.', 'danger')
+            return render_template('register.html', username=username)
+
+        conn = get_db_connection()
+        # Kiểm tra xem tên người dùng đã tồn tại chưa
+        existing_user = conn.execute('SELECT * FROM users WHERE username = ?', (username,)).fetchone()
+        if existing_user:
+            conn.close()
+            flash('Tên người dùng đã tồn tại. Vui lòng chọn tên khác.', 'danger')
+            return render_template('register.html', username=username)
+
+        password_hash = generate_password_hash(password)
+        try:
+            # Người dùng đầu tiên đăng ký sẽ là admin
+            cursor = conn.cursor()
+            cursor.execute("SELECT COUNT(*) FROM users")
+            user_count = cursor.fetchone()[0]
+            is_admin = True if user_count == 0 else False # Người dùng đầu tiên là admin
+            
+            cursor.execute('INSERT INTO users (username, password, is_admin) VALUES (?, ?, ?)',
+                           (username, password_hash, is_admin))
+            conn.commit()
+            flash('Đăng ký thành công! Bạn có thể đăng nhập ngay bây giờ.', 'success')
+            return redirect(url_for('login'))
+        except sqlite3.IntegrityError:
+            flash('Lỗi đăng ký. Vui lòng thử lại.', 'danger')
+        finally:
+            conn.close()
+    return render_template('register.html')
 
 @app.route('/dashboard')
-def dashboard_page():
+def dashboard():
+    """Hiển thị trang quản lý hoặc trang người dùng."""
     if 'user_id' not in session:
-        return redirect(url_for('login_page'))
-    return render_template('dashboard.html') # Trang bảng điều khiển của bạn
+        flash('Vui lòng đăng nhập để truy cập trang này.', 'warning')
+        return redirect(url_for('login'))
 
-@app.route('/login', methods=['POST'])
-def login():
-    data = request.get_json()
-    username = data.get('username')
-    password = data.get('password')
+    conn = get_db_connection()
+    users = []
+    if session.get('is_admin'):
+        users = conn.execute('SELECT id, username, is_admin FROM users').fetchall()
+    conn.close()
+    return render_template('dashboard.html', users=users, is_admin=session.get('is_admin'))
 
-    user = User.query.filter_by(username=username).first()
-
-    if user and user.check_password(password):
-        session['user_id'] = user.id
-        session['username'] = user.username
-        session['is_admin'] = user.is_admin
-        return jsonify({'message': 'Đăng nhập thành công!', 'redirect': url_for('dashboard_page')}), 200
-    else:
-        return jsonify({'message': 'Sai tên đăng nhập hoặc mật khẩu.'}), 401
-
-@app.route('/register', methods=['POST'])
-def register():
-    data = request.get_json()
-    username = data.get('username')
-    password = data.get('password')
-
-    if not username or not password:
-        return jsonify({'message': 'Tên đăng nhập và mật khẩu không được để trống.'}), 400
-
-    existing_user = User.query.filter_by(username=username).first()
-    if existing_user:
-        return jsonify({'message': 'Tên đăng nhập đã tồn tại.'}), 409
-
-    new_user = User(username=username)
-    new_user.set_password(password)
-    db.session.add(new_user)
-    db.session.commit()
-
-    return jsonify({'message': 'Đăng ký thành công!'}), 201
-
-@app.route('/logout', methods=['POST'])
+@app.route('/logout')
 def logout():
+    """Đăng xuất người dùng."""
     session.pop('user_id', None)
     session.pop('username', None)
     session.pop('is_admin', None)
-    return jsonify({'message': 'Đăng xuất thành công!'}), 200
+    flash('Bạn đã đăng xuất.', 'info')
+    return redirect(url_for('login'))
 
-# Các điểm cuối API để quản lý người dùng
-@app.route('/api/user_info', methods=['GET'])
-def get_user_info():
-    user_id = session.get('user_id')
-    if not user_id:
-        return jsonify({'message': 'Chưa đăng nhập.'}), 401
-    
-    user = User.query.get(user_id)
-    if user:
-        return jsonify({'username': user.username, 'is_admin': user.is_admin}), 200
-    return jsonify({'message': 'Người dùng không tồn tại.'}), 404
+@app.route('/delete_user/<int:user_id>', methods=['POST'])
+def delete_user(user_id):
+    """Xóa người dùng (chỉ dành cho admin)."""
+    if 'user_id' not in session or not session.get('is_admin'):
+        flash('Bạn không có quyền thực hiện hành động này.', 'danger')
+        return redirect(url_for('dashboard'))
 
+    conn = get_db_connection()
+    try:
+        # Không cho phép admin tự xóa chính mình nếu là admin duy nhất
+        current_admin_id = session['user_id']
+        if user_id == current_admin_id:
+            # Kiểm tra xem có admin nào khác không
+            other_admins = conn.execute("SELECT COUNT(*) FROM users WHERE is_admin = 1 AND id != ?", (current_admin_id,)).fetchone()[0]
+            if other_admins == 0:
+                flash('Không thể xóa tài khoản quản trị viên duy nhất.', 'danger')
+                return redirect(url_for('dashboard'))
 
-@app.route('/api/users', methods=['GET'])
-def get_all_users():
-    if not session.get('is_admin'):
-        return jsonify({'message': 'Không có quyền truy cập.'}), 403
-    
-    users = User.query.all()
-    user_list = [{'username': user.username, 'is_admin': user.is_admin} for user in users]
-    return jsonify(user_list), 200
+        conn.execute('DELETE FROM users WHERE id = ?', (user_id,))
+        conn.commit()
+        flash('Người dùng đã được xóa thành công.', 'success')
+    except Exception as e:
+        flash(f'Lỗi khi xóa người dùng: {e}', 'danger')
+    finally:
+        conn.close()
+    return redirect(url_for('dashboard'))
 
-@app.route('/api/users/<username>', methods=['PUT'])
-def update_user(username):
-    if not session.get('is_admin'):
-        return jsonify({'message': 'Không có quyền truy cập.'}), 403
+@app.route('/toggle_admin/<int:user_id>', methods=['POST'])
+def toggle_admin(user_id):
+    """Thay đổi trạng thái admin của người dùng (chỉ dành cho admin)."""
+    if 'user_id' not in session or not session.get('is_admin'):
+        flash('Bạn không có quyền thực hiện hành động này.', 'danger')
+        return redirect(url_for('dashboard'))
 
-    user_to_update = User.query.filter_by(username=username).first()
-    if not user_to_update:
-        return jsonify({'message': 'Người dùng không tồn tại.'}), 404
+    conn = get_db_connection()
+    try:
+        user = conn.execute('SELECT is_admin FROM users WHERE id = ?', (user_id,)).fetchone()
+        if user:
+            new_admin_status = not bool(user['is_admin'])
+            
+            # Ngăn chặn việc hạ cấp admin duy nhất
+            if not new_admin_status and user_id == session['user_id']:
+                # Kiểm tra xem có admin nào khác không
+                other_admins = conn.execute("SELECT COUNT(*) FROM users WHERE is_admin = 1 AND id != ?", (session['user_id'],)).fetchone()[0]
+                if other_admins == 0:
+                    flash('Không thể hạ cấp tài khoản quản trị viên duy nhất.', 'danger')
+                    return redirect(url_for('dashboard'))
 
-    data = request.get_json()
-    new_password = data.get('new_password')
-    # Bạn có thể thêm các trường khác để cập nhật ở đây nếu cần, như trạng thái is_admin
-
-    if new_password:
-        user_to_update.set_password(new_password)
-        db.session.commit()
-        return jsonify({'message': f'Mật khẩu của {username} đã được cập nhật.'}), 200
-    else:
-        return jsonify({'message': 'Không có mật khẩu mới được cung cấp để cập nhật.'}), 400
-
-@app.route('/api/users/<username>', methods=['DELETE'])
-def delete_user(username):
-    if not session.get('is_admin'):
-        return jsonify({'message': 'Không có quyền truy cập.'}), 403
-
-    user_to_delete = User.query.filter_by(username=username).first()
-    if not user_to_delete:
-        return jsonify({'message': 'Người dùng không tồn tại.'}), 404
-    
-    if user_to_delete.username == session.get('username'): # Ngăn quản trị viên tự xóa tài khoản của họ
-        return jsonify({'message': 'Bạn không thể xóa tài khoản của chính mình.'}), 400
-
-    db.session.delete(user_to_delete)
-    db.session.commit()
-    return jsonify({'message': f'Tài khoản {username} đã được xóa.'}), 200
-
+            conn.execute('UPDATE users SET is_admin = ? WHERE id = ?', (new_admin_status, user_id))
+            conn.commit()
+            flash(f'Trạng thái quản trị của người dùng đã được cập nhật.', 'success')
+        else:
+            flash('Không tìm thấy người dùng.', 'danger')
+    except Exception as e:
+        flash(f'Lỗi khi cập nhật trạng thái quản trị: {e}', 'danger')
+    finally:
+        conn.close()
+    return redirect(url_for('dashboard'))
 
 if __name__ == '__main__':
-    app.run(debug=True) # Đặt debug=False trong môi trường sản xuất
-# app.py
-import os
-# ...
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///database.db')
-# ...
+    app.run(debug=True)

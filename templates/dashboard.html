@@ -1,235 +1,176 @@
 <!DOCTYPE html>
 <html lang="vi">
-
 <head>
-    <meta name="csrf-token" content="YOUR_CSRF_TOKEN_HERE">
     <meta charset="UTF-8">
-    <link rel="icon" type="image/x-icon" href="https://lssdhrtime.up.railway.app/assets/images/Logo_LSCSD.png">
-    <title>Bảng điều khiển</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="https://lssdhrtime.up.railway.app/assets/bootstrap-5.3.7-dist/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://lssdhrtime.up.railway.app/assets/fontawesome-6.5.0/css/all.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
-    <link href="https://fonts.googleapis.com/css?family=Archivo+Black&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.7/css/bootstrap.min.css"
-        integrity="sha512-fw7f+TcMjTb7bpbLJZlP8g2Y4XcCyFZW8uy8HsRZsH/SwbMw0plKHFHr99DN3l04VsYNwvzicUX/6qurvIxbxw=="
-        crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bảng điều khiển - Hệ thống xử án RLIFE</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
         body {
-            background-color: #f8f9fa;
+            font-family: 'Inter', sans-serif;
+            background-color: #1a202c; /* Dark background */
+            color: #e2e8f0; /* Light text */
         }
-        .dashboard-container {
-            max-width: 800px;
-            margin: 50px auto;
-            background-color: #fff;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        .flash-message {
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            text-align: center;
         }
-        .user-list {
-            margin-top: 30px;
+        .flash-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
         }
-        .user-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px 0;
-            border-bottom: 1px solid #eee;
+        .flash-danger {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
         }
-        .user-item:last-child {
-            border-bottom: none;
+        .flash-warning {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+        }
+        .flash-info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
         }
     </style>
 </head>
-
-<body>
-    <div class="container dashboard-container">
-        <h1 class="text-center mb-4">Chào mừng đến với Bảng điều khiển LSSD HRM</h1>
-        <p class="text-center">Bạn đã đăng nhập thành công!</p>
-
-        <div class="d-grid gap-2">
-            <button class="btn btn-danger" id="logoutButton">Đăng xuất</button>
+<body class="flex flex-col min-h-screen">
+    <header class="bg-gray-800 shadow-md py-4">
+        <div class="container mx-auto px-4 flex justify-between items-center">
+            <h1 class="text-2xl font-bold text-yellow-400">HỆ THỐNG XỬ ÁN RLIFE</h1>
+            <nav>
+                <ul class="flex space-x-4 items-center">
+                    <li><span class="text-gray-300">Xin chào, {{ session.username }}!</span></li>
+                    {% if is_admin %}
+                        <li><span class="text-yellow-400 font-semibold">(Quản trị viên)</span></li>
+                    {% endif %}
+                    <li>
+                        <a href="{{ url_for('logout') }}" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300 ease-in-out transform hover:scale-105">
+                            Đăng xuất
+                        </a>
+                    </li>
+                </ul>
+            </nav>
         </div>
+    </header>
 
-        <hr>
+    <main class="flex-grow container mx-auto px-4 py-8">
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="mb-4">
+                    {% for category, message in messages %}
+                        <div class="flash-message flash-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
 
-        <h3 class="mt-5">Thông tin tài khoản</h3>
-        <p><strong>Tên đăng nhập:</strong> <span id="loggedInUsername"></span></p>
+        <h2 class="text-3xl font-bold text-yellow-400 mb-6">Bảng điều khiển</h2>
 
-        <hr>
+        {% if is_admin %}
+            <div class="bg-gray-800 p-6 rounded-lg shadow-xl mb-8">
+                <h3 class="text-2xl font-semibold text-gray-200 mb-4">Quản lý người dùng</h3>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full bg-gray-700 rounded-lg overflow-hidden">
+                        <thead class="bg-gray-600">
+                            <tr>
+                                <th class="py-3 px-4 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">ID</th>
+                                <th class="py-3 px-4 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Tên đăng nhập</th>
+                                <th class="py-3 px-4 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Là Admin</th>
+                                <th class="py-3 px-4 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Hành động</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-600">
+                            {% for user in users %}
+                                <tr class="hover:bg-gray-600">
+                                    <td class="py-3 px-4 whitespace-nowrap">{{ user.id }}</td>
+                                    <td class="py-3 px-4 whitespace-nowrap">{{ user.username }}</td>
+                                    <td class="py-3 px-4 whitespace-nowrap">
+                                        {% if user.is_admin %}
+                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Có</span>
+                                        {% else %}
+                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">Không</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="py-3 px-4 whitespace-nowrap flex space-x-2">
+                                        {% if user.id != session.user_id or users|selectattr('is_admin')|list|length > 1 %}
+                                            <form action="{{ url_for('toggle_admin', user_id=user.id) }}" method="POST" class="inline-block">
+                                                <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white py-1 px-3 rounded-md text-sm transition duration-300">
+                                                    {% if user.is_admin %}Hạ cấp{% else %}Thăng cấp{% endif %}
+                                                </button>
+                                            </form>
+                                            <form action="{{ url_for('delete_user', user_id=user.id) }}" method="POST" class="inline-block" onsubmit="return confirm('Bạn có chắc chắn muốn xóa người dùng này?');">
+                                                <button type="submit" class="bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded-md text-sm transition duration-300">
+                                                    Xóa
+                                                </button>
+                                            </form>
+                                        {% else %}
+                                            <span class="text-gray-400 text-sm">Không thể chỉnh sửa</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
 
-        <h3 class="mt-5">Quản lý tài khoản (Chỉ dành cho Admin)</h3>
-        <div class="user-list" id="userList">
-            <p>Đang tải danh sách người dùng...</p>
+            <!-- Placeholder for other management sections based on image_e0c23d.jpg -->
+            <div class="bg-gray-800 p-6 rounded-lg shadow-xl mb-8">
+                <h3 class="text-2xl font-semibold text-gray-200 mb-4">Quản lý Mục khác (Placeholder)</h3>
+                <p class="text-gray-400">
+                    Đây là nơi bạn có thể thêm các phần quản lý khác như "Tội danh", "Hệ thống xử án", v.v., dựa trên yêu cầu của bạn.
+                    Hiện tại, đây chỉ là một placeholder.
+                </p>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
+                    <div class="bg-gray-700 p-4 rounded-lg">
+                        <h4 class="font-semibold text-gray-200 mb-2">Mục 1 - Vi phạm IT</h4>
+                        <p class="text-gray-400 text-sm">Quản lý các loại vi phạm công nghệ thông tin.</p>
+                        <button class="mt-3 bg-yellow-500 hover:bg-yellow-600 text-gray-900 py-2 px-4 rounded-md text-sm">Xem chi tiết</button>
+                    </div>
+                    <div class="bg-gray-700 p-4 rounded-lg">
+                        <h4 class="font-semibold text-gray-200 mb-2">Mục 2 - Hồ sơ</h4>
+                        <p class="text-gray-400 text-sm">Quản lý hồ sơ tội phạm và người dùng.</p>
+                        <button class="mt-3 bg-yellow-500 hover:bg-yellow-600 text-gray-900 py-2 px-4 rounded-md text-sm">Xem chi tiết</button>
+                    </div>
+                    <div class="bg-gray-700 p-4 rounded-lg">
+                        <h4 class="font-semibold text-gray-200 mb-2">Mục 3 - Báo cáo</h4>
+                        <p class="text-gray-400 text-sm">Tạo và xem các báo cáo thống kê.</p>
+                        <button class="mt-3 bg-yellow-500 hover:bg-yellow-600 text-gray-900 py-2 px-4 rounded-md text-sm">Xem chi tiết</button>
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            <div class="bg-gray-800 p-6 rounded-lg shadow-xl">
+                <h3 class="text-2xl font-semibold text-gray-200 mb-4">Chào mừng đến với Hệ thống xử án RLIFE</h3>
+                <p class="text-gray-400">
+                    Bạn đã đăng nhập thành công. Đây là trang dành cho người dùng thông thường.
+                    Các tính năng quản lý chỉ dành cho tài khoản quản trị viên.
+                </p>
+                <p class="text-gray-400 mt-2">
+                    Nếu bạn là quản trị viên, vui lòng đăng nhập bằng tài khoản quản trị viên của bạn.
+                </p>
+            </div>
+        {% endif %}
+    </main>
+
+    <footer class="bg-gray-800 py-4 mt-8">
+        <div class="container mx-auto px-4 text-center text-gray-500 text-sm">
+            © 2025 Hệ thống xử án RLIFE. Thuộc quyền sở hữu của CuongMaxx.
         </div>
-    </div>
+    </footer>
 
-    <div class="notifications">
-        <span id="session-success" data-message=""></span>
-        <span id="session-warning" data-message=""></span>
-        <span id="session-info" data-message=""></span>
-        <span id="session-error" data-message=""></span>
-    </div>
-
-    <script src="https://lssdhrtime.up.railway.app/assets/js/notification.js"></script>
-    <script src="https://lssdhrtime.up.railway.app/assets/bootstrap-5.3.7-dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', async function () {
-            const logoutButton = document.getElementById('logoutButton');
-            const loggedInUsernameSpan = document.getElementById('loggedInUsername');
-            const userListDiv = document.getElementById('userList');
-
-            // Lấy thông tin người dùng hiện tại
-            try {
-                const response = await fetch('/api/user_info'); // Điểm cuối backend để lấy người dùng hiện tại
-                if (response.ok) {
-                    const userData = await response.json();
-                    loggedInUsernameSpan.textContent = userData.username;
-
-                    // Nếu người dùng là quản trị viên, tải và hiển thị tất cả người dùng
-                    if (userData.is_admin) {
-                        await fetchAllUsers();
-                    } else {
-                        userListDiv.innerHTML = '<p>Bạn không có quyền quản lý tài khoản.</p>';
-                    }
-                } else {
-                    toastr.error('Không thể tải thông tin người dùng. Vui lòng đăng nhập lại.');
-                    window.location.href = '/'; // Chuyển hướng đến đăng nhập nếu chưa xác thực
-                }
-            } catch (error) {
-                console.error('Lỗi khi lấy thông tin người dùng:', error);
-                toastr.error('Lỗi kết nối. Vui lòng thử lại.');
-                window.location.href = '/'; // Chuyển hướng khi có lỗi
-            }
-
-            logoutButton.addEventListener('click', async function () {
-                try {
-                    const response = await fetch('/logout', { // Điểm cuối backend để đăng xuất
-                        method: 'POST',
-                        headers: {
-                            'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                        }
-                    });
-                    const data = await response.json();
-                    if (response.ok) {
-                        toastr.success(data.message || 'Đăng xuất thành công!');
-                        window.location.href = '/'; // Chuyển hướng đến trang đăng nhập
-                    } else {
-                        toastr.error(data.message || 'Đăng xuất thất bại.');
-                    }
-                } catch (error) {
-                    console.error('Lỗi trong quá trình đăng xuất:', error);
-                    toastr.error('Có lỗi xảy ra khi đăng xuất.');
-                }
-            });
-
-            async function fetchAllUsers() {
-                try {
-                    const response = await fetch('/api/users'); // Điểm cuối backend để lấy tất cả người dùng
-                    if (response.ok) {
-                        const users = await response.json();
-                        userListDiv.innerHTML = ''; // Xóa văn bản tải
-                        if (users.length === 0) {
-                            userListDiv.innerHTML = '<p>Chưa có tài khoản nào được tạo.</p>';
-                        } else {
-                            users.forEach(user => {
-                                const userItem = document.createElement('div');
-                                userItem.classList.add('user-item');
-                                userItem.innerHTML = `
-                                    <span>${user.username}</span>
-                                    <div>
-                                        <button class="btn btn-sm btn-info" onclick="editUser('${user.username}')">Sửa</button>
-                                        <button class="btn btn-sm btn-danger" onclick="deleteUser('${user.username}')">Xóa</button>
-                                    </div>
-                                `;
-                                userListDiv.appendChild(userItem);
-                            });
-                        }
-                    } else {
-                        toastr.error('Không thể tải danh sách người dùng.');
-                    }
-                } catch (error) {
-                    console.error('Lỗi khi tải người dùng:', error);
-                    toastr.error('Lỗi kết nối khi tải danh sách người dùng.');
-                }
-            }
-
-            // Các hàm giữ chỗ cho quản lý người dùng (sẽ được triển khai trong backend)
-            window.editUser = function(username) {
-                Swal.fire({
-                    title: `Sửa tài khoản ${username}`,
-                    input: 'password',
-                    inputLabel: 'Nhập mật khẩu mới (để trống nếu không đổi)',
-                    inputPlaceholder: 'Mật khẩu mới',
-                    showCancelButton: true,
-                    confirmButtonText: 'Lưu',
-                    cancelButtonText: 'Hủy',
-                    preConfirm: async (newPassword) => {
-                        try {
-                            const response = await fetch(`/api/users/${username}`, {
-                                method: 'PUT',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                                },
-                                body: JSON.stringify({ new_password: newPassword })
-                            });
-                            const data = await response.json();
-                            if (!response.ok) {
-                                throw new Error(data.message || 'Lỗi khi cập nhật!');
-                            }
-                            return data;
-                        } catch (error) {
-                            Swal.showValidationMessage(`Yêu cầu thất bại: ${error}`);
-                        }
-                    },
-                    allowOutsideClick: () => !Swal.isLoading()
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        toastr.success(result.value.message || 'Cập nhật thành công!');
-                        fetchAllUsers(); // Làm mới danh sách
-                    }
-                });
-            };
-
-            window.deleteUser = function(username) {
-                Swal.fire({
-                    title: `Bạn có chắc muốn xóa tài khoản ${username}?`,
-                    text: "Hành động này không thể hoàn tác!",
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonColor: '#d33',
-                    cancelButtonColor: '#3085d6',
-                    confirmButtonText: 'Có, xóa!',
-                    cancelButtonText: 'Không'
-                }).then(async (result) => {
-                    if (result.isConfirmed) {
-                        try {
-                            const response = await fetch(`/api/users/${username}`, {
-                                method: 'DELETE',
-                                headers: {
-                                    'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                                }
-                            });
-                            const data = await response.json();
-                            if (response.ok) {
-                                toastr.success(data.message || 'Xóa tài khoản thành công!');
-                                fetchAllUsers(); // Làm mới danh sách
-                            } else {
-                                toastr.error(data.message || 'Xóa tài khoản thất bại.');
-                            }
-                        } catch (error) {
-                            console.error('Lỗi khi xóa người dùng:', error);
-                            toastr.error('Có lỗi xảy ra khi xóa tài khoản.');
-                        }
-                    }
-                });
-            };
-        });
-    </script>
+    <!-- Liên kết đến các tệp JavaScript -->
+    <script src="/static/js/loading.js"></script>
+    <script src="/static/js/notification.js"></script>
 </body>
-
 </html>
