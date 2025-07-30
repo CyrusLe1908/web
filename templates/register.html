@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/x-icon" href="https://lssdhrtime.up.railway.app/assets/images/Logo_LSCSD.png">
+    <title>Đăng ký tài khoản</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://lssdhrtime.up.railway.app/assets/bootstrap-5.3.7-dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://lssdhrtime.up.railway.app/assets/fontawesome-6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    <link href="https://fonts.googleapis.com/css?family=Archivo+Black&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.7/css/bootstrap.min.css"
+        integrity="sha512-fw7f+TcMjTb7bpbLJZlP8g2Y4XcCyFZW8uy8HsRZsH/SwbMw0plKHFHr99DN3l04VsYNwvzicUX/6qurvIxbxw=="
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="https://lssdhrtime.up.railway.app/assets/css/login.css">
+    <style>
+        /* Thêm bất kỳ kiểu dáng cụ thể nào cho trang đăng ký tại đây, hoặc sửa đổi login.css */
+        .login-box {
+            height: auto; /* Điều chỉnh chiều cao cho nhiều trường hơn */
+            padding-bottom: 30px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="loadingOverlay" class="loader-overlay" style="display: none;">
+        <div class="lssd-loader-content">
+            <div class="lssd-badge">
+                <div class="star"></div>
+                <div class="text">LSSD</div>
+            </div>
+            <div class="loading-text">Đang tải Los Santos Sheriff Department...</div>
+            <div class="loader-clock">
+                <span class="hour"></span>
+                <span class="min"></span>
+                <span class="circel"></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="container group-login">
+        <div class="login-box">
+            <div class="logo-login-page">
+                <img src="https://lssdhrtime.up.railway.app/assets/images/LSSD_HRM.logo2.png" alt="Logo">
+            </div>
+            <h2>ĐĂNG KÝ TÀI KHOẢN<br><span>LOS SANTOS POLICE DEPARTMENT</span><br>GTA5 RLIFE</h2>
+
+            <form id="registrationForm" class="form-login">
+                <div class="form__group field">
+                    <input type="text" class="form__field input-login" placeholder="TÊN ĐĂNG NHẬP" name="username"
+                        id="regUsername" required />
+                    <label for="regUsername" class="form__label">TÊN ĐĂNG NHẬP</label>
+                </div>
+
+                <div class="form__group field" style="margin-top: 20px; position: relative;">
+                    <input type="password" class="form__field input-login" placeholder="MẬT KHẨU" name="password"
+                        id="regPassword" required />
+                    <label for="regPassword" class="form__label">MẬT KHẨU</label>
+                    <i class="fa-regular fa-eye toggle-password" id="toggleRegPassword"></i>
+                </div>
+
+                <div class="form__group field" style="margin-top: 20px; position: relative;">
+                    <input type="password" class="form__field input-login" placeholder="XÁC NHẬN MẬT KHẨU" name="confirmPassword"
+                        id="confirmPassword" required />
+                    <label for="confirmPassword" class="form__label">XÁC NHẬN MẬT KHẨU</label>
+                    <i class="fa-regular fa-eye toggle-password" id="toggleConfirmPassword"></i>
+                </div>
+                
+                <button type="submit" class="btn-login">ĐĂNG KÝ</button>
+                <div class="account-option" style="margin-top: 20px;">
+                    <span>
+                        <a href="/" class="note-account-link">Đã có tài khoản? Đăng nhập</a>
+                    </span>
+                </div>
+            </form>
+            <p class="footer-login-page">© 2025 Designed and developed by <a style="color: white;"
+                    href="https://github.com/CyrusLe1908" target="_blank">@cyrusle</a></p>
+            <p class="version-login-page">version 0.1</p>
+        </div>
+    </div>
+
+    <div class="notifications">
+        <span id="session-success" data-message=""></span>
+        <span id="session-warning" data-message=""></span>
+        <span id="session-info" data-message=""></span>
+        <span id="session-error" data-message=""></span>
+    </div>
+
+    <script src="https://lssdhrtime.up.railway.app/assets/js/loading.js"></script>
+    <script src="https://lssdhrtime.up.railway.app/assets/js/notification.js"></script>
+    <script src="https://lssdhrtime.up.railway.app/assets/bootstrap-5.3.7-dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Chuyển đổi hiển thị mật khẩu cho đăng ký
+            const toggleRegPassword = document.getElementById('toggleRegPassword');
+            const regPasswordField = document.getElementById('regPassword');
+            if (toggleRegPassword) {
+                toggleRegPassword.addEventListener('click', function () {
+                    const type = regPasswordField.getAttribute('type') === 'password' ? 'text' : 'password';
+                    regPasswordField.setAttribute('type', type);
+                    this.classList.toggle('fa-eye');
+                    this.classList.toggle('fa-eye-slash');
+                });
+            }
+
+            const toggleConfirmPassword = document.getElementById('toggleConfirmPassword');
+            const confirmPasswordField = document.getElementById('confirmPassword');
+            if (toggleConfirmPassword) {
+                toggleConfirmPassword.addEventListener('click', function () {
+                    const type = confirmPasswordField.getAttribute('type') === 'password' ? 'text' : 'password';
+                    confirmPasswordField.setAttribute('type', type);
+                    this.classList.toggle('fa-eye');
+                    this.classList.toggle('fa-eye-slash');
+                });
+            }
+
+            // Xử lý gửi biểu mẫu đăng ký
+            document.getElementById('registrationForm').addEventListener('submit', async function (e) {
+                e.preventDefault(); // Ngăn chặn gửi biểu mẫu mặc định
+                showLoading();
+
+                const username = document.getElementById('regUsername').value;
+                const password = document.getElementById('regPassword').value;
+                const confirmPassword = document.getElementById('confirmPassword').value;
+                const btn = document.querySelector('.btn-login');
+
+                if (password !== confirmPassword) {
+                    hideLoading();
+                    toastr.error('Mật khẩu xác nhận không khớp.');
+                    return;
+                }
+
+                btn.disabled = true;
+                btn.textContent = 'Đang đăng ký...';
+
+                try {
+                    const response = await fetch('/register', { // Điểm cuối này sẽ được xử lý bởi backend Python của bạn
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content') // Bao gồm mã CSRF
+                        },
+                        body: JSON.stringify({ username, password })
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        toastr.success(data.message || 'Đăng ký thành công! Vui lòng đăng nhập.');
+                        window.location.href = '/'; // Chuyển hướng đến trang đăng nhập
+                    } else {
+                        toastr.error(data.message || 'Đăng ký thất bại. Vui lòng thử lại.');
+                    }
+                } catch (error) {
+                    console.error('Lỗi trong quá trình đăng ký:', error);
+                    toastr.error('Có lỗi xảy ra khi đăng ký. Vui lòng thử lại sau.');
+                } finally {
+                    hideLoading();
+                    btn.disabled = false;
+                    btn.textContent = 'ĐĂNG KÝ';
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>

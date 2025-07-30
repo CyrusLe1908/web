@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta name="csrf-token" content="YOUR_CSRF_TOKEN_HERE">
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/x-icon" href="https://lssdhrtime.up.railway.app/assets/images/Logo_LSCSD.png">
+    <title>Bảng điều khiển</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://lssdhrtime.up.railway.app/assets/bootstrap-5.3.7-dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://lssdhrtime.up.railway.app/assets/fontawesome-6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    <link href="https://fonts.googleapis.com/css?family=Archivo+Black&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.7/css/bootstrap.min.css"
+        integrity="sha512-fw7f+TcMjTb7bpbLJZlP8g2Y4XcCyFZW8uy8HsRZsH/SwbMw0plKHFHr99DN3l04VsYNwvzicUX/6qurvIxbxw=="
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .dashboard-container {
+            max-width: 800px;
+            margin: 50px auto;
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .user-list {
+            margin-top: 30px;
+        }
+        .user-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .user-item:last-child {
+            border-bottom: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container dashboard-container">
+        <h1 class="text-center mb-4">Chào mừng đến với Bảng điều khiển LSSD HRM</h1>
+        <p class="text-center">Bạn đã đăng nhập thành công!</p>
+
+        <div class="d-grid gap-2">
+            <button class="btn btn-danger" id="logoutButton">Đăng xuất</button>
+        </div>
+
+        <hr>
+
+        <h3 class="mt-5">Thông tin tài khoản</h3>
+        <p><strong>Tên đăng nhập:</strong> <span id="loggedInUsername"></span></p>
+
+        <hr>
+
+        <h3 class="mt-5">Quản lý tài khoản (Chỉ dành cho Admin)</h3>
+        <div class="user-list" id="userList">
+            <p>Đang tải danh sách người dùng...</p>
+        </div>
+    </div>
+
+    <div class="notifications">
+        <span id="session-success" data-message=""></span>
+        <span id="session-warning" data-message=""></span>
+        <span id="session-info" data-message=""></span>
+        <span id="session-error" data-message=""></span>
+    </div>
+
+    <script src="https://lssdhrtime.up.railway.app/assets/js/notification.js"></script>
+    <script src="https://lssdhrtime.up.railway.app/assets/bootstrap-5.3.7-dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async function () {
+            const logoutButton = document.getElementById('logoutButton');
+            const loggedInUsernameSpan = document.getElementById('loggedInUsername');
+            const userListDiv = document.getElementById('userList');
+
+            // Lấy thông tin người dùng hiện tại
+            try {
+                const response = await fetch('/api/user_info'); // Điểm cuối backend để lấy người dùng hiện tại
+                if (response.ok) {
+                    const userData = await response.json();
+                    loggedInUsernameSpan.textContent = userData.username;
+
+                    // Nếu người dùng là quản trị viên, tải và hiển thị tất cả người dùng
+                    if (userData.is_admin) {
+                        await fetchAllUsers();
+                    } else {
+                        userListDiv.innerHTML = '<p>Bạn không có quyền quản lý tài khoản.</p>';
+                    }
+                } else {
+                    toastr.error('Không thể tải thông tin người dùng. Vui lòng đăng nhập lại.');
+                    window.location.href = '/'; // Chuyển hướng đến đăng nhập nếu chưa xác thực
+                }
+            } catch (error) {
+                console.error('Lỗi khi lấy thông tin người dùng:', error);
+                toastr.error('Lỗi kết nối. Vui lòng thử lại.');
+                window.location.href = '/'; // Chuyển hướng khi có lỗi
+            }
+
+            logoutButton.addEventListener('click', async function () {
+                try {
+                    const response = await fetch('/logout', { // Điểm cuối backend để đăng xuất
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                        }
+                    });
+                    const data = await response.json();
+                    if (response.ok) {
+                        toastr.success(data.message || 'Đăng xuất thành công!');
+                        window.location.href = '/'; // Chuyển hướng đến trang đăng nhập
+                    } else {
+                        toastr.error(data.message || 'Đăng xuất thất bại.');
+                    }
+                } catch (error) {
+                    console.error('Lỗi trong quá trình đăng xuất:', error);
+                    toastr.error('Có lỗi xảy ra khi đăng xuất.');
+                }
+            });
+
+            async function fetchAllUsers() {
+                try {
+                    const response = await fetch('/api/users'); // Điểm cuối backend để lấy tất cả người dùng
+                    if (response.ok) {
+                        const users = await response.json();
+                        userListDiv.innerHTML = ''; // Xóa văn bản tải
+                        if (users.length === 0) {
+                            userListDiv.innerHTML = '<p>Chưa có tài khoản nào được tạo.</p>';
+                        } else {
+                            users.forEach(user => {
+                                const userItem = document.createElement('div');
+                                userItem.classList.add('user-item');
+                                userItem.innerHTML = `
+                                    <span>${user.username}</span>
+                                    <div>
+                                        <button class="btn btn-sm btn-info" onclick="editUser('${user.username}')">Sửa</button>
+                                        <button class="btn btn-sm btn-danger" onclick="deleteUser('${user.username}')">Xóa</button>
+                                    </div>
+                                `;
+                                userListDiv.appendChild(userItem);
+                            });
+                        }
+                    } else {
+                        toastr.error('Không thể tải danh sách người dùng.');
+                    }
+                } catch (error) {
+                    console.error('Lỗi khi tải người dùng:', error);
+                    toastr.error('Lỗi kết nối khi tải danh sách người dùng.');
+                }
+            }
+
+            // Các hàm giữ chỗ cho quản lý người dùng (sẽ được triển khai trong backend)
+            window.editUser = function(username) {
+                Swal.fire({
+                    title: `Sửa tài khoản ${username}`,
+                    input: 'password',
+                    inputLabel: 'Nhập mật khẩu mới (để trống nếu không đổi)',
+                    inputPlaceholder: 'Mật khẩu mới',
+                    showCancelButton: true,
+                    confirmButtonText: 'Lưu',
+                    cancelButtonText: 'Hủy',
+                    preConfirm: async (newPassword) => {
+                        try {
+                            const response = await fetch(`/api/users/${username}`, {
+                                method: 'PUT',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                                },
+                                body: JSON.stringify({ new_password: newPassword })
+                            });
+                            const data = await response.json();
+                            if (!response.ok) {
+                                throw new Error(data.message || 'Lỗi khi cập nhật!');
+                            }
+                            return data;
+                        } catch (error) {
+                            Swal.showValidationMessage(`Yêu cầu thất bại: ${error}`);
+                        }
+                    },
+                    allowOutsideClick: () => !Swal.isLoading()
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        toastr.success(result.value.message || 'Cập nhật thành công!');
+                        fetchAllUsers(); // Làm mới danh sách
+                    }
+                });
+            };
+
+            window.deleteUser = function(username) {
+                Swal.fire({
+                    title: `Bạn có chắc muốn xóa tài khoản ${username}?`,
+                    text: "Hành động này không thể hoàn tác!",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#3085d6',
+                    confirmButtonText: 'Có, xóa!',
+                    cancelButtonText: 'Không'
+                }).then(async (result) => {
+                    if (result.isConfirmed) {
+                        try {
+                            const response = await fetch(`/api/users/${username}`, {
+                                method: 'DELETE',
+                                headers: {
+                                    'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                                }
+                            });
+                            const data = await response.json();
+                            if (response.ok) {
+                                toastr.success(data.message || 'Xóa tài khoản thành công!');
+                                fetchAllUsers(); // Làm mới danh sách
+                            } else {
+                                toastr.error(data.message || 'Xóa tài khoản thất bại.');
+                            }
+                        } catch (error) {
+                            console.error('Lỗi khi xóa người dùng:', error);
+                            toastr.error('Có lỗi xảy ra khi xóa tài khoản.');
+                        }
+                    }
+                });
+            };
+        });
+    </script>
+</body>
+
+</html>

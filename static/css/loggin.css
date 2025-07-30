@@ -1,0 +1,528 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap');
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Montserrat', sans-serif;
+    background-image: url('images/lspd.jpg'); /* Đảm bảo hình ảnh này tồn tại */
+    background-size: cover;
+    background-position: center;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden; /* Ngăn cuộn trang */
+    position: relative;
+    color: #fff;
+}
+
+body::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5); /* Lớp phủ mờ */
+    z-index: 0;
+}
+
+.group-login {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+.login-box {
+    background: rgba(0, 0, 0, 0.7);
+    padding: 40px;
+    border-radius: 10px;
+    box-shadow: 0 15px 25px rgba(0, 0, 0, 0.6);
+    text-align: center;
+    width: 400px;
+    box-sizing: border-box;
+    position: relative;
+    backdrop-filter: blur(5px); /* Hiệu ứng mờ đục */
+}
+
+.logo-login-page img {
+    max-width: 120px;
+    margin-bottom: 20px;
+}
+
+.login-box h2 {
+    margin: 0 0 30px;
+    padding: 0;
+    color: #fff;
+    text-align: center;
+    font-size: 2em;
+    font-weight: bold;
+    line-height: 1.2;
+}
+
+.login-box h2 span {
+    font-size: 0.7em;
+    display: block;
+    margin-top: 5px;
+    color: #bbb;
+}
+
+.form__group {
+    position: relative;
+    margin-bottom: 30px;
+}
+
+.form__field {
+    width: 100%;
+    padding: 10px 0;
+    font-size: 1em;
+    color: #fff;
+    margin-bottom: 30px;
+    border: none;
+    border-bottom: 2px solid #fff;
+    outline: none;
+    background: transparent;
+    transition: border-bottom-color 0.3s ease;
+}
+
+.form__field:focus {
+    border-bottom-color: #03e9f4;
+}
+
+.form__label {
+    position: absolute;
+    top: 0;
+    left: 0;
+    padding: 10px 0;
+    font-size: 1em;
+    color: #aaa;
+    pointer-events: none;
+    transition: 0.5s;
+}
+
+.form__field:focus~.form__label,
+.form__field:not(:placeholder-shown)~.form__label {
+    top: -20px;
+    left: 0;
+    color: #03e9f4;
+    font-size: 0.8em;
+}
+
+.toggle-password {
+    position: absolute;
+    right: 10px;
+    top: 10px;
+    color: #aaa;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: color 0.3s ease;
+}
+
+.toggle-password:hover {
+    color: #03e9f4;
+}
+
+.btn-login {
+    background-color: #03e9f4;
+    color: #050801;
+    padding: 12px 25px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1.1em;
+    font-weight: bold;
+    text-transform: uppercase;
+    transition: 0.5s;
+    letter-spacing: 2px;
+    position: relative;
+    overflow: hidden;
+    margin-top: 20px;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.btn-login:hover {
+    background: #03e9f4;
+    color: #03e9f4;
+    border-radius: 5px;
+    box-shadow: 0 0 5px #03e9f4,
+        0 0 25px #03e9f4,
+        0 0 50px #03e9f4,
+        0 0 100px #03e9f4;
+    transition-delay: 0.1s;
+}
+
+.btn-login span {
+    position: absolute;
+    display: block;
+}
+
+.btn-login span:nth-child(1) {
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #03e9f4);
+    animation: btn-anim1 1s linear infinite;
+}
+
+@keyframes btn-anim1 {
+    0% {
+        left: -100%;
+    }
+
+    50%,
+    100% {
+        left: 100%;
+    }
+}
+
+.btn-login span:nth-child(2) {
+    top: -100%;
+    right: 0;
+    width: 2px;
+    height: 100%;
+    background: linear-gradient(180deg, transparent, #03e9f4);
+    animation: btn-anim2 1s linear infinite;
+    animation-delay: 0.25s
+}
+
+@keyframes btn-anim2 {
+    0% {
+        top: -100%;
+    }
+
+    50%,
+    100% {
+        top: 100%;
+    }
+}
+
+.btn-login span:nth-child(3) {
+    bottom: 0;
+    right: -100%;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(270deg, transparent, #03e9f4);
+    animation: btn-anim3 1s linear infinite;
+    animation-delay: 0.5s
+}
+
+@keyframes btn-anim3 {
+    0% {
+        right: -100%;
+    }
+
+    50%,
+    100% {
+        right: 100%;
+    }
+}
+
+.btn-login span:nth-child(4) {
+    bottom: -100%;
+    left: 0;
+    width: 2px;
+    height: 100%;
+    background: linear-gradient(360deg, transparent, #03e9f4);
+    animation: btn-anim4 1s linear infinite;
+    animation-delay: 0.75s
+}
+
+@keyframes btn-anim4 {
+    0% {
+        bottom: -100%;
+    }
+
+    50%,
+    100% {
+        bottom: 100%;
+    }
+}
+
+.account-option {
+    margin-top: 15px;
+    font-size: 0.9em;
+}
+
+.note-account-link {
+    color: #03e9f4;
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.note-account-link:hover {
+    color: #fff;
+    text-decoration: underline;
+}
+
+.footer-login-page {
+    margin-top: 30px;
+    font-size: 0.8em;
+    color: #aaa;
+}
+
+.footer-login-page a {
+    color: #03e9f4;
+    text-decoration: none;
+}
+
+.footer-login-page a:hover {
+    text-decoration: underline;
+}
+
+.version-login-page {
+    font-size: 0.7em;
+    color: #777;
+    margin-top: 5px;
+}
+
+/* Loader Overlay Styles */
+.loader-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.9); /* Nền tối hơn */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    flex-direction: column;
+}
+
+.lssd-loader-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+}
+
+.lssd-badge {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: linear-gradient(45deg, #03e9f4, #00BCD4);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 0 15px rgba(3, 233, 244, 0.7);
+    animation: pulse 1.5s infinite alternate;
+}
+
+.lssd-badge .star {
+    position: absolute;
+    width: 60px;
+    height: 60px;
+    background-color: white;
+    clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+    transform: rotate(15deg); /* Tùy chỉnh độ xoay cho giống logo */
+}
+
+.lssd-badge .text {
+    position: absolute;
+    font-family: 'Archivo Black', sans-serif;
+    font-size: 2.2em;
+    color: #000;
+    font-weight: bold;
+    letter-spacing: 2px;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+}
+
+.loading-text {
+    color: #fff;
+    font-size: 1.2em;
+    margin-top: 15px;
+    animation: fadeInOut 2s infinite;
+}
+
+/* Clock Loader */
+.loader-clock {
+    position: relative;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    border: 3px solid #03e9f4;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    animation: rotate 2s linear infinite;
+}
+
+.loader-clock .hour,
+.loader-clock .min {
+    position: absolute;
+    background-color: #fff;
+    border-radius: 5px;
+    transform-origin: bottom center;
+}
+
+.loader-clock .hour {
+    width: 4px;
+    height: 18px;
+    top: calc(50% - 18px); /* Điều chỉnh vị trí điểm gốc */
+    left: calc(50% - 2px);
+    animation: tick-hour 12s linear infinite;
+}
+
+.loader-clock .min {
+    width: 3px;
+    height: 25px;
+    top: calc(50% - 25px); /* Điều chỉnh vị trí điểm gốc */
+    left: calc(50% - 1.5px);
+    animation: tick-min 2s linear infinite;
+}
+
+.loader-clock .circel {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    background-color: #fff;
+    border-radius: 50%;
+    z-index: 10;
+}
+
+@keyframes rotate {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+@keyframes tick-hour {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+@keyframes tick-min {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); box-shadow: 0 0 15px rgba(3, 233, 244, 0.7); }
+    100% { transform: scale(1.05); box-shadow: 0 0 25px rgba(3, 233, 244, 0.9); }
+}
+
+@keyframes fadeInOut {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+}
+
+
+/* Notifications styles (toastr.js inspired) */
+.notifications {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 10000;
+}
+
+.toastr-common {
+    padding: 15px 25px;
+    border-radius: 8px;
+    color: white;
+    font-size: 16px;
+    margin-bottom: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    max-width: 350px;
+    word-wrap: break-word;
+    animation: slideInRight 0.5s forwards, fadeOut 0.5s 4.5s forwards; /* Slide in, stay, then fade out */
+    opacity: 0; /* Bắt đầu ẩn */
+}
+
+.toastr-success {
+    background-color: #28a745; /* Xanh lá cây */
+}
+
+.toastr-error {
+    background-color: #dc3545; /* Đỏ */
+}
+
+.toastr-info {
+    background-color: #17a2b8; /* Xanh lam */
+}
+
+.toastr-warning {
+    background-color: #ffc107; /* Vàng */
+    color: #343a40; /* Chữ tối hơn cho nền vàng */
+}
+
+.toastr-common .icon {
+    font-size: 20px;
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateX(20px); /* Kéo sang phải một chút khi biến mất */
+    }
+}
+
+
+/* Modal styles for the contact info */
+.glass-modal {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border-radius: 15px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+}
+
+.glass-modal .modal-header {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.glass-modal .modal-title {
+    color: white;
+}
+
+.glass-modal .btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%); /* Để nút close màu trắng */
+}
+
+.table_login_contact {
+    width: 100%;
+    color: white;
+    border-collapse: collapse;
+}
+
+.table_login_contact td {
+    padding: 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    vertical-align: middle;
+}
+
+.table_login_contact tr:last-child td {
+    border-bottom: none;
+}
+
+.avatar_contact {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-right: 15px;
+    border: 2px solid #03e9f4;
+}
