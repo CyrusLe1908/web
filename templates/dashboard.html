@@ -7,7 +7,7 @@
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/static/css/login.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
 </head>
 <body class="flex flex-col min-h-screen dashboard-background">
     <header class="bg-gray-800 shadow-md py-4">
@@ -15,8 +15,10 @@
             <h1 class="text-2xl font-bold text-yellow-400">HỆ THỐNG XỬ ÁN RLIFE</h1>
             <nav>
                 <ul class="flex space-x-4 items-center">
-                    <li><span class="text-gray-300">Xin chào, CuongMaxx!</span></li>
+                    <li><span class="text-gray-300">Xin chào, {{ session.username }}!</span></li>
+                    {% if is_admin %}
                         <li><span class="text-yellow-400 font-semibold">(Quản trị viên)</span></li>
+                    {% endif %}
                     <li>
                         <a href="{{ url_for('logout') }}" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300 ease-in-out transform hover:scale-105">
                             Đăng xuất
@@ -29,7 +31,7 @@
 
     <main class="flex-grow container mx-auto px-4 py-8">
         <!-- Flash Messages -->
-        <!--{% with messages = get_flashed_messages(with_categories=true) %}
+        {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 <div class="mb-4">
                     {% for category, message in messages %}
@@ -37,10 +39,11 @@
                     {% endfor %}
                 </div>
             {% endif %}
-        {% endwith %}-->
+        {% endwith %}
 
         <h2 class="text-3xl font-bold text-yellow-400 mb-6">Bảng điều khiển</h2>
 
+        {% if is_admin %}
             <div class="bg-gray-800 p-6 rounded-lg shadow-xl mb-8">
                 <h3 class="text-2xl font-semibold text-gray-200 mb-4">Thêm người dùng mới</h3>
                 <form action="{{ url_for('add_user') }}" method="POST" class="space-y-4">
@@ -79,35 +82,36 @@
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-600">
-
+                            {% for user in users %}
                                 <tr class="hover:bg-gray-600">
-                                    <td class="py-3 px-4 whitespace-nowrap"></td>
-                                    <td class="py-3 px-4 whitespace-nowrap"></td>
+                                    <td class="py-3 px-4 whitespace-nowrap">{{ user['id'] }}</td> {# Changed from user.id #}
+                                    <td class="py-3 px-4 whitespace-nowrap">{{ user['username'] }}</td> {# Changed from user.username #}
                                     <td class="py-3 px-4 whitespace-nowrap">
-
+                                        {% if user['is_admin'] %} {# Changed from user.is_admin #}
                                             <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Có</span>
-
+                                        {% else %}
                                             <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">Không</span>
- 
+                                        {% endif %}
                                     </td>
                                     <td class="py-3 px-4 whitespace-nowrap flex space-x-2">
-
-                                            <form action="{{ url_for('toggle_admin', user_id=user.id) }}" method="POST" class="inline-block">
+                                        {# Check if the user is not the current session user OR if there's more than one admin #}
+                                        {% if user['id'] != session.user_id or users|selectattr('is_admin')|list|length > 1 %}
+                                            <form action="{{ url_for('toggle_admin', user_id=user['id']) }}" method="POST" class="inline-block"> {# Changed from user.id #}
                                                 <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white py-1 px-3 rounded-md text-sm transition duration-300">
-                                                    Hạ cấp Thăng cấp
+                                                    {% if user['is_admin'] %}Hạ cấp{% else %}Thăng cấp{% endif %} {# Changed from user.is_admin #}
                                                 </button>
                                             </form>
-                                            <form action="{{ url_for('delete_user', user_id=user.id) }}" method="POST" class="inline-block" onsubmit="return confirm('Bạn có chắc chắn muốn xóa người dùng này?');">
+                                            <form action="{{ url_for('delete_user', user_id=user['id']) }}" method="POST" class="inline-block" onsubmit="return confirm('Bạn có chắc chắn muốn xóa người dùng này?');"> {# Changed from user.id #}
                                                 <button type="submit" class="bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded-md text-sm transition duration-300">
                                                     Xóa
                                                 </button>
                                             </form>
-
+                                        {% else %}
                                             <span class="text-gray-400 text-sm">Không thể chỉnh sửa</span>
-
+                                        {% endif %}
                                     </td>
                                 </tr>
-
+                            {% endfor %}
                         </tbody>
                     </table>
                 </div>
@@ -138,7 +142,7 @@
                     </div>
                 </div>
             </div>
-
+        {% else %}
             <div class="bg-gray-800 p-6 rounded-lg shadow-xl">
                 <h3 class="text-2xl font-semibold text-gray-200 mb-4">Chào mừng đến với Hệ thống xử án RLIFE</h3>
                 <p class="text-gray-400">
@@ -149,17 +153,17 @@
                     Nếu bạn là quản trị viên, vui lòng đăng nhập bằng tài khoản quản trị viên của bạn.
                 </p>
             </div>
-
+        {% endif %}
     </main>
 
     <footer class="bg-gray-800 py-4 mt-8">
         <div class="container mx-auto px-4 text-center text-gray-500 text-sm">
-            © 2025 Hệ thống xử án RLIFE. Thuộc quyền sở hữu của CuongMaxx.
+            © 2025 Hệ thống xử án RLIFE. Bảo lưu mọi quyền.
         </div>
     </footer>
 
     <!-- Liên kết đến các tệp JavaScript -->
-    <script src="/static/js/loading.js"></script>
-    <script src="/static/js/notification.js"></script>
+    <script src="{{ url_for('static', filename='js/loading.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/notification.js') }}"></script>
 </body>
 </html>

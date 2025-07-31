@@ -7,7 +7,7 @@
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/static/css/login.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
 </head>
 <body class="bg-gray-900 text-white login-background">
     <div class="bg-gray-800 bg-opacity-90 p-8 rounded-xl shadow-2xl w-full max-w-md mx-4 sm:mx-auto">
@@ -19,7 +19,7 @@
         </div>
 
         <!-- Flash Messages -->
-        <!--{% with messages = get_flashed_messages(with_categories=true) %}
+        {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 <div class="mb-4">
                     {% for category, message in messages %}
@@ -27,7 +27,7 @@
                     {% endfor %}
                 </div>
             {% endif %}
-        {% endwith %}-->
+        {% endwith %}
 
         <form action="{{ url_for('login') }}" method="POST" class="space-y-5">
             <div>
@@ -54,7 +54,7 @@
     </div>
 
     <!-- Liên kết đến các tệp JavaScript -->
-    <script src="/static/js/loading.js"></script>
-    <script src="/static/js/notification.js"></script>
+    <script src="{{ url_for('static', filename='js/loading.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/notification.js') }}"></script>
 </body>
 </html>
