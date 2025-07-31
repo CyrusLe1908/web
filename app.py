@@ -1,9 +1,9 @@
 # app.py
 import sqlite3
-from flask import Flask, render_template, request, redirect, url_for, session, flash
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
-import datetime # Import datetime module
+import datetime
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key_here' # Thay thế bằng một khóa bí mật mạnh hơn trong môi trường sản phẩm
@@ -52,6 +52,15 @@ def init_db():
             conn.commit()
             print(f"Người dùng quản trị '{admin_username}' đã được tạo với mật khẩu 'adminpass'.")
         conn.commit()
+
+# Hàm tiện ích để định dạng phút thành HH:MM
+def format_minutes_to_hhmm(minutes):
+    if minutes is None:
+        return "N/A"
+    total_seconds = int(minutes * 60)
+    hours = total_seconds // 3600
+    minutes = (total_seconds % 3600) // 60
+    return f"{hours:02d}h {minutes:02d}m"
 
 # Khởi tạo cơ sở dữ liệu khi ứng dụng bắt đầu
 with app.app_context():
@@ -137,7 +146,7 @@ def dashboard():
                     # Xử lý lỗi nếu định dạng thời gian không khớp
                     pass
 
-            user_dict['total_online_minutes'] = round(total_online_minutes, 2) # Làm tròn 2 chữ số thập phân
+            user_dict['total_online_minutes_formatted'] = format_minutes_to_hhmm(total_online_minutes)
             users_data.append(user_dict)
     
     conn.close()
@@ -243,7 +252,7 @@ def toggle_admin(user_id):
 
             conn.execute('UPDATE users SET is_admin = ? WHERE id = ?', (new_admin_status, user_id))
             conn.commit()
-            flash(f'Trạng thái quản trị của người dùng đã được cập tạo.', 'success')
+            flash(f'Trạng thái quản trị của người dùng đã được cập nhật.', 'success')
         else:
             flash('Không tìm thấy người dùng.', 'danger')
     except Exception as e:
@@ -315,7 +324,7 @@ def clock_out():
                     (current_time.strftime('%Y-%m-%d %H:%M:%S'), duration_minutes, session_id)
                 )
                 conn.commit()
-                flash(f'Bạn đã tan ca thành công! Thời gian online: {duration_minutes:.2f} phút.', 'success')
+                flash(f'Bạn đã tan ca thành công! Thời gian online: {format_minutes_to_hhmm(duration_minutes)}.', 'success')
             except ValueError:
                 flash('Lỗi định dạng thời gian khi tính toán thời gian online.', 'danger')
     except Exception as e:
@@ -323,6 +332,66 @@ def clock_out():
     finally:
         conn.close()
     return redirect(url_for('dashboard'))
+
+@app.route('/api/user_attendance_history/<int:user_id>')
+def get_user_attendance_history(user_id):
+    """API để lấy lịch sử chấm công chi tiết của một người dùng."""
+    if 'user_id' not in session or not session.get('is_admin'):
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    conn = get_db_connection()
+    
+    # Lấy tất cả các phiên chấm công của người dùng
+    attendance_records = conn.execute(
+        'SELECT clock_in_time, clock_out_time, duration_minutes FROM attendance WHERE user_id = ? ORDER BY clock_in_time DESC',
+        (user_id,)
+    ).fetchall()
+    
+    conn.close()
+
+    history = []
+    for record in attendance_records:
+        clock_in_time = record['clock_in_time']
+        clock_out_time = record['clock_out_time']
+        duration_minutes = record['duration_minutes']
+
+        # Định dạng ngày và giờ
+        try:
+            in_dt = datetime.datetime.strptime(clock_in_time, '%Y-%m-%d %H:%M:%S')
+            date_str = in_dt.strftime('%Y-%m-%d')
+            in_time_str = in_dt.strftime('%H:%M:%S')
+        except ValueError:
+            date_str = "N/A"
+            in_time_str = "N/A"
+
+        out_time_str = "Đang Online"
+        formatted_duration = "Đang Online"
+
+        if clock_out_time:
+            try:
+                out_dt = datetime.datetime.strptime(clock_out_time, '%Y-%m-%d %H:%M:%S')
+                out_time_str = out_dt.strftime('%H:%M:%S')
+                formatted_duration = format_minutes_to_hhmm(duration_minutes)
+            except ValueError:
+                out_time_str = "N/A"
+                formatted_duration = "N/A"
+        elif clock_in_time: # Nếu đang online, tính thời lượng hiện tại
+            try:
+                in_dt = datetime.datetime.strptime(clock_in_time, '%Y-%m-%d %H:%M:%S')
+                current_duration_seconds = (datetime.datetime.now() - in_dt).total_seconds()
+                current_duration_minutes = current_duration_seconds / 60.0
+                formatted_duration = f"{format_minutes_to_hhmm(current_duration_minutes)} (hiện tại)"
+            except ValueError:
+                pass # Giữ nguyên "Đang Online" nếu có lỗi định dạng
+
+        history.append({
+            'date': date_str,
+            'clock_in': in_time_str,
+            'clock_out': out_time_str,
+            'duration': formatted_duration
+        })
+    
+    return jsonify(history)
 
 if __name__ == '__main__':
     app.run(debug=True)
