@@ -31,12 +31,14 @@ def init_db():
             )
         ''')
         # Tạo bảng attendance nếu chưa tồn tại
+        # Cập nhật schema: clock_in_time, clock_out_time, duration_minutes
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS attendance (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER NOT NULL,
-                timestamp TEXT NOT NULL,
-                status TEXT NOT NULL, -- 'online' hoặc 'offline'
+                clock_in_time TEXT NOT NULL,
+                clock_out_time TEXT, -- NULL nếu đang online
+                duration_minutes REAL, -- NULL nếu đang online, tính toán khi tan ca
                 FOREIGN KEY (user_id) REFERENCES users (id)
             )
         ''')
@@ -94,34 +96,49 @@ def dashboard():
     
     # Lấy trạng thái chấm công gần nhất của người dùng hiện tại
     current_user_last_attendance = conn.execute(
-        'SELECT status FROM attendance WHERE user_id = ? ORDER BY timestamp DESC LIMIT 1',
+        'SELECT clock_out_time FROM attendance WHERE user_id = ? ORDER BY clock_in_time DESC LIMIT 1',
         (current_user_id,)
     ).fetchone()
-    current_user_status = current_user_last_attendance['status'] if current_user_last_attendance else 'Không rõ'
+    # Nếu clock_out_time là NULL, nghĩa là đang online
+    current_user_status = 'online' if current_user_last_attendance and current_user_last_attendance['clock_out_time'] is None else 'offline'
 
     users_data = []
     if session.get('is_admin'):
-        # Lấy tất cả người dùng cùng với trạng thái chấm công gần nhất của họ
-        # Sử dụng subquery để tìm bản ghi chấm công mới nhất cho mỗi người dùng
-        users_with_status = conn.execute('''
-            SELECT
-                u.id,
-                u.username,
-                u.is_admin,
-                a.status AS last_status,
-                a.timestamp AS last_status_time
-            FROM users u
-            LEFT JOIN (
-                SELECT
-                    user_id,
-                    status,
-                    timestamp,
-                    ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY timestamp DESC) as rn
-                FROM attendance
-            ) a ON u.id = a.user_id AND a.rn = 1
-            ORDER BY u.username ASC
-        ''').fetchall()
-        users_data = users_with_status
+        all_users = conn.execute('SELECT id, username, is_admin FROM users ORDER BY username ASC').fetchall()
+        
+        for user in all_users:
+            user_dict = dict(user) # Chuyển Row thành dict để dễ dàng thêm trường mới
+            
+            # Lấy trạng thái online/offline hiện tại
+            last_session = conn.execute(
+                'SELECT clock_out_time, clock_in_time FROM attendance WHERE user_id = ? ORDER BY clock_in_time DESC LIMIT 1',
+                (user['id'],)
+            ).fetchone()
+            
+            user_dict['current_status'] = 'online' if last_session and last_session['clock_out_time'] is None else 'offline'
+            
+            # Tính tổng thời gian online
+            total_online_minutes = 0.0
+            completed_sessions = conn.execute(
+                'SELECT duration_minutes FROM attendance WHERE user_id = ? AND duration_minutes IS NOT NULL',
+                (user['id'],)
+            ).fetchall()
+            
+            for session_record in completed_sessions:
+                total_online_minutes += session_record['duration_minutes']
+            
+            # Nếu người dùng đang online, thêm thời gian của phiên hiện tại
+            if user_dict['current_status'] == 'online' and last_session and last_session['clock_in_time']:
+                try:
+                    clock_in_dt = datetime.datetime.strptime(last_session['clock_in_time'], '%Y-%m-%d %H:%M:%S')
+                    current_duration = (datetime.datetime.now() - clock_in_dt).total_seconds() / 60.0
+                    total_online_minutes += current_duration
+                except ValueError:
+                    # Xử lý lỗi nếu định dạng thời gian không khớp
+                    pass
+
+            user_dict['total_online_minutes'] = round(total_online_minutes, 2) # Làm tròn 2 chữ số thập phân
+            users_data.append(user_dict)
     
     conn.close()
     return render_template('dashboard.html',
@@ -226,7 +243,7 @@ def toggle_admin(user_id):
 
             conn.execute('UPDATE users SET is_admin = ? WHERE id = ?', (new_admin_status, user_id))
             conn.commit()
-            flash(f'Trạng thái quản trị của người dùng đã được cập nhật.', 'success')
+            flash(f'Trạng thái quản trị của người dùng đã được cập tạo.', 'success')
         else:
             flash('Không tìm thấy người dùng.', 'danger')
     except Exception as e:
@@ -246,17 +263,17 @@ def clock_in():
     timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     conn = get_db_connection()
     try:
-        # Tùy chọn: Kiểm tra trạng thái cuối cùng để tránh các mục trùng lặp liên tiếp
-        last_status_record = conn.execute(
-            'SELECT status FROM attendance WHERE user_id = ? ORDER BY timestamp DESC LIMIT 1',
+        # Kiểm tra xem người dùng có đang online không (clock_out_time is NULL)
+        active_session = conn.execute(
+            'SELECT id FROM attendance WHERE user_id = ? AND clock_out_time IS NULL',
             (user_id,)
         ).fetchone()
 
-        if last_status_record and last_status_record['status'] == 'online':
+        if active_session:
             flash('Bạn đã vào ca rồi.', 'info')
         else:
-            conn.execute('INSERT INTO attendance (user_id, timestamp, status) VALUES (?, ?, ?)',
-                           (user_id, timestamp, 'online'))
+            conn.execute('INSERT INTO attendance (user_id, clock_in_time, clock_out_time, duration_minutes) VALUES (?, ?, ?, ?)',
+                           (user_id, timestamp, None, None)) # clock_out_time và duration_minutes là NULL ban đầu
             conn.commit()
             flash('Bạn đã vào ca thành công!', 'success')
     except Exception as e:
@@ -267,28 +284,40 @@ def clock_in():
 
 @app.route('/clock_out', methods=['POST'])
 def clock_out():
-    """Ghi lại trạng thái 'offline' cho người dùng hiện tại."""
+    """Ghi lại trạng thái 'offline' cho người dùng hiện tại và tính toán thời gian online."""
     if 'user_id' not in session:
         flash('Vui lòng đăng nhập để chấm công.', 'warning')
         return redirect(url_for('login'))
 
     user_id = session['user_id']
-    timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    current_time = datetime.datetime.now()
     conn = get_db_connection()
     try:
-        # Tùy chọn: Kiểm tra trạng thái cuối cùng để tránh các mục trùng lặp liên tiếp
-        last_status_record = conn.execute(
-            'SELECT status FROM attendance WHERE user_id = ? ORDER BY timestamp DESC LIMIT 1',
+        # Tìm phiên làm việc gần đây nhất mà chưa tan ca (clock_out_time IS NULL)
+        active_session = conn.execute(
+            'SELECT id, clock_in_time FROM attendance WHERE user_id = ? AND clock_out_time IS NULL ORDER BY clock_in_time DESC LIMIT 1',
             (user_id,)
         ).fetchone()
 
-        if last_status_record and last_status_record['status'] == 'offline':
-            flash('Bạn đã tan ca rồi.', 'info')
+        if not active_session:
+            flash('Bạn chưa vào ca.', 'info')
         else:
-            conn.execute('INSERT INTO attendance (user_id, timestamp, status) VALUES (?, ?, ?)',
-                           (user_id, timestamp, 'offline'))
-            conn.commit()
-            flash('Bạn đã tan ca thành công!', 'success')
+            session_id = active_session['id']
+            clock_in_dt_str = active_session['clock_in_time']
+            
+            try:
+                clock_in_dt = datetime.datetime.strptime(clock_in_dt_str, '%Y-%m-%d %H:%M:%S')
+                duration_seconds = (current_time - clock_in_dt).total_seconds()
+                duration_minutes = duration_seconds / 60.0 # Chuyển đổi sang phút
+                
+                conn.execute(
+                    'UPDATE attendance SET clock_out_time = ?, duration_minutes = ? WHERE id = ?',
+                    (current_time.strftime('%Y-%m-%d %H:%M:%S'), duration_minutes, session_id)
+                )
+                conn.commit()
+                flash(f'Bạn đã tan ca thành công! Thời gian online: {duration_minutes:.2f} phút.', 'success')
+            except ValueError:
+                flash('Lỗi định dạng thời gian khi tính toán thời gian online.', 'danger')
     except Exception as e:
         flash(f'Lỗi khi tan ca: {e}', 'danger')
     finally:

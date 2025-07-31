@@ -63,7 +63,7 @@
                 <form action="{{ url_for('clock_out') }}" method="POST">
                     <button type="submit"
                             class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300 ease-in-out transform hover:scale-105"
-                            {% if current_user_status == 'offline' or current_user_status == 'Không rõ' %}disabled{% endif %}>
+                            {% if current_user_status == 'offline' %}disabled{% endif %}> {# Disable if already offline #}
                         Tan ca
                     </button>
                 </form>
@@ -105,7 +105,8 @@
                                 <th class="py-3 px-4 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">ID</th>
                                 <th class="py-3 px-4 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Tên đăng nhập</th>
                                 <th class="py-3 px-4 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Là Admin</th>
-                                <th class="py-3 px-4 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Trạng thái hiện tại</th> {# New column #}
+                                <th class="py-3 px-4 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Trạng thái hiện tại</th>
+                                <th class="py-3 px-4 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Tổng thời gian Online</th> {# New column header #}
                                 <th class="py-3 px-4 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Hành động</th>
                             </tr>
                         </thead>
@@ -121,17 +122,19 @@
                                             <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">Không</span>
                                         {% endif %}
                                     </td>
-                                    <td class="py-3 px-4 whitespace-nowrap"> {# Display current status for each user #}
-                                        {% if user['last_status'] == 'online' %}
+                                    <td class="py-3 px-4 whitespace-nowrap">
+                                        {% if user['current_status'] == 'online' %}
                                             <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Online</span>
-                                        {% elif user['last_status'] == 'offline' %}
+                                        {% elif user['current_status'] == 'offline' %}
                                             <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">Offline</span>
                                         {% else %}
                                             <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">Chưa xác định</span>
                                         {% endif %}
                                     </td>
+                                    <td class="py-3 px-4 whitespace-nowrap">
+                                        {{ "%.2f" | format(user['total_online_minutes']) }} phút
+                                    </td>
                                     <td class="py-3 px-4 whitespace-nowrap flex space-x-2">
-                                        {# Check if the user is not the current session user OR if there's more than one admin #}
                                         {% if user['id'] != session.user_id or users|selectattr('is_admin')|list|length > 1 %}
                                             <form action="{{ url_for('toggle_admin', user_id=user['id']) }}" method="POST" class="inline-block">
                                                 <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white py-1 px-3 rounded-md text-sm transition duration-300">
