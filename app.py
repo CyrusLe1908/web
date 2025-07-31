@@ -3,6 +3,7 @@ import sqlite3
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
+import datetime # Import datetime module
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key_here' # Thay thế bằng một khóa bí mật mạnh hơn trong môi trường sản phẩm
@@ -17,15 +18,26 @@ def get_db_connection():
     return conn
 
 def init_db():
-    """Khởi tạo cơ sở dữ liệu và tạo bảng người dùng."""
+    """Khởi tạo cơ sở dữ liệu và tạo bảng người dùng và bảng chấm công."""
     with get_db_connection() as conn:
         cursor = conn.cursor()
+        # Tạo bảng users nếu chưa tồn tại
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 username TEXT UNIQUE NOT NULL,
                 password TEXT NOT NULL,
                 is_admin BOOLEAN NOT NULL DEFAULT 0
+            )
+        ''')
+        # Tạo bảng attendance nếu chưa tồn tại
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS attendance (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                timestamp TEXT NOT NULL,
+                status TEXT NOT NULL, -- 'online' hoặc 'offline'
+                FOREIGN KEY (user_id) REFERENCES users (id)
             )
         ''')
         # Kiểm tra nếu chưa có người dùng nào, tạo người dùng admin đầu tiên
@@ -70,11 +82,6 @@ def login():
             flash('Tên đăng nhập hoặc mật khẩu không đúng.', 'danger')
     return render_template('index.html')
 
-# Xóa bỏ route đăng ký công khai
-# @app.route('/register', methods=['GET', 'POST'])
-# def register():
-#     ... (đoạn mã này đã bị xóa)
-
 @app.route('/dashboard')
 def dashboard():
     """Hiển thị trang quản lý hoặc trang người dùng."""
@@ -83,11 +90,44 @@ def dashboard():
         return redirect(url_for('login'))
 
     conn = get_db_connection()
-    users = []
+    current_user_id = session['user_id']
+    
+    # Lấy trạng thái chấm công gần nhất của người dùng hiện tại
+    current_user_last_attendance = conn.execute(
+        'SELECT status FROM attendance WHERE user_id = ? ORDER BY timestamp DESC LIMIT 1',
+        (current_user_id,)
+    ).fetchone()
+    current_user_status = current_user_last_attendance['status'] if current_user_last_attendance else 'Không rõ'
+
+    users_data = []
     if session.get('is_admin'):
-        users = conn.execute('SELECT id, username, is_admin FROM users').fetchall()
+        # Lấy tất cả người dùng cùng với trạng thái chấm công gần nhất của họ
+        # Sử dụng subquery để tìm bản ghi chấm công mới nhất cho mỗi người dùng
+        users_with_status = conn.execute('''
+            SELECT
+                u.id,
+                u.username,
+                u.is_admin,
+                a.status AS last_status,
+                a.timestamp AS last_status_time
+            FROM users u
+            LEFT JOIN (
+                SELECT
+                    user_id,
+                    status,
+                    timestamp,
+                    ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY timestamp DESC) as rn
+                FROM attendance
+            ) a ON u.id = a.user_id AND a.rn = 1
+            ORDER BY u.username ASC
+        ''').fetchall()
+        users_data = users_with_status
+    
     conn.close()
-    return render_template('dashboard.html', users=users, is_admin=session.get('is_admin'))
+    return render_template('dashboard.html',
+                           users=users_data,
+                           is_admin=session.get('is_admin'),
+                           current_user_status=current_user_status)
 
 @app.route('/logout')
 def logout():
@@ -151,6 +191,9 @@ def delete_user(user_id):
                 flash('Không thể xóa tài khoản quản trị viên duy nhất.', 'danger')
                 return redirect(url_for('dashboard'))
 
+        # Xóa các bản ghi chấm công liên quan trước
+        conn.execute('DELETE FROM attendance WHERE user_id = ?', (user_id,))
+        # Sau đó xóa người dùng
         conn.execute('DELETE FROM users WHERE id = ?', (user_id,))
         conn.commit()
         flash('Người dùng đã được xóa thành công.', 'success')
@@ -188,6 +231,66 @@ def toggle_admin(user_id):
             flash('Không tìm thấy người dùng.', 'danger')
     except Exception as e:
         flash(f'Lỗi khi cập nhật trạng thái quản trị: {e}', 'danger')
+    finally:
+        conn.close()
+    return redirect(url_for('dashboard'))
+
+@app.route('/clock_in', methods=['POST'])
+def clock_in():
+    """Ghi lại trạng thái 'online' cho người dùng hiện tại."""
+    if 'user_id' not in session:
+        flash('Vui lòng đăng nhập để chấm công.', 'warning')
+        return redirect(url_for('login'))
+
+    user_id = session['user_id']
+    timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    conn = get_db_connection()
+    try:
+        # Tùy chọn: Kiểm tra trạng thái cuối cùng để tránh các mục trùng lặp liên tiếp
+        last_status_record = conn.execute(
+            'SELECT status FROM attendance WHERE user_id = ? ORDER BY timestamp DESC LIMIT 1',
+            (user_id,)
+        ).fetchone()
+
+        if last_status_record and last_status_record['status'] == 'online':
+            flash('Bạn đã vào ca rồi.', 'info')
+        else:
+            conn.execute('INSERT INTO attendance (user_id, timestamp, status) VALUES (?, ?, ?)',
+                           (user_id, timestamp, 'online'))
+            conn.commit()
+            flash('Bạn đã vào ca thành công!', 'success')
+    except Exception as e:
+        flash(f'Lỗi khi vào ca: {e}', 'danger')
+    finally:
+        conn.close()
+    return redirect(url_for('dashboard'))
+
+@app.route('/clock_out', methods=['POST'])
+def clock_out():
+    """Ghi lại trạng thái 'offline' cho người dùng hiện tại."""
+    if 'user_id' not in session:
+        flash('Vui lòng đăng nhập để chấm công.', 'warning')
+        return redirect(url_for('login'))
+
+    user_id = session['user_id']
+    timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    conn = get_db_connection()
+    try:
+        # Tùy chọn: Kiểm tra trạng thái cuối cùng để tránh các mục trùng lặp liên tiếp
+        last_status_record = conn.execute(
+            'SELECT status FROM attendance WHERE user_id = ? ORDER BY timestamp DESC LIMIT 1',
+            (user_id,)
+        ).fetchone()
+
+        if last_status_record and last_status_record['status'] == 'offline':
+            flash('Bạn đã tan ca rồi.', 'info')
+        else:
+            conn.execute('INSERT INTO attendance (user_id, timestamp, status) VALUES (?, ?, ?)',
+                           (user_id, timestamp, 'offline'))
+            conn.commit()
+            flash('Bạn đã tan ca thành công!', 'success')
+    except Exception as e:
+        flash(f'Lỗi khi tan ca: {e}', 'danger')
     finally:
         conn.close()
     return redirect(url_for('dashboard'))
